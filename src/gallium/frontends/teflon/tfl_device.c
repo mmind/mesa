@@ -4,6 +4,7 @@
  */
 
 #include "pipe-loader/pipe_loader.h"
+#include "pipe-loader/pipe_loader_priv.h"
 #include "pipe/p_context.h"
 #include "pipe/p_screen.h"
 #include "pipe/p_state.h"
@@ -446,7 +447,8 @@ __attribute__((visibility("default"))) TfLiteDelegate *tflite_plugin_create_dele
    pipe_loader_probe(devs, n, false);
 
    for (int i = 0; i < n; i++) {
-      if (strstr("etnaviv", devs[i]->driver_name))
+      if (strstr("etnaviv", devs[i]->driver_name) ||
+          strstr("rknpu", devs[i]->driver_name))
          delegate->dev = devs[i];
       else
          pipe_loader_release(&devs[i], 1);

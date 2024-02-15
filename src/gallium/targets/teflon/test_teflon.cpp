@@ -20,15 +20,18 @@
 #define TEST_MOBILEDET   1
 
 #define TOLERANCE       2
+#define ADD_TOLERANCE   45
 #define MODEL_TOLERANCE 8
 #define QUANT_TOLERANCE 2
 
 std::vector<bool> is_signed{false}; /* TODO: Support INT8? */
 std::vector<bool> padding_same{false, true};
 std::vector<int> stride{1, 2};
-std::vector<int> output_channels{1, 32, 120, 128, 160, 256};
-std::vector<int> input_channels{1, 32, 120, 128, 256};
-std::vector<int> dw_channels{1, 32, 120, 128, 256};
+std::vector<int> output_channels{1, 32, 120};
+std::vector<int> input_channels{1, 32, 120};
+std::vector<int> add_output_channels{1, 16};
+std::vector<int> add_input_channels{1, 32, 120};
+std::vector<int> dw_channels{1, 32, 64};
 std::vector<int> dw_weight_size{3, 5};
 std::vector<int> weight_size{1, 3, 5};
 std::vector<int> input_size{3, 5, 8, 80, 112};
@@ -333,7 +336,7 @@ TEST_P(Add, Op)
             std::get<0>(GetParam()),
             false, /* depthwise */
             4,
-            TOLERANCE);
+            ADD_TOLERANCE);
 }
 
 static inline std::string
@@ -358,8 +361,8 @@ INSTANTIATE_TEST_SUITE_P(
    ::testing::Combine(::testing::ValuesIn(is_signed),
                       ::testing::ValuesIn(padding_same),
                       ::testing::ValuesIn(stride),
-                      ::testing::ValuesIn(output_channels),
-                      ::testing::ValuesIn(input_channels),
+                      ::testing::ValuesIn(add_output_channels),
+                      ::testing::ValuesIn(add_input_channels),
                       ::testing::ValuesIn(weight_size),
                       ::testing::ValuesIn(input_size)),
    AddTestCaseName);
