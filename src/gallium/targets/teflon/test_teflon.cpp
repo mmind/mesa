@@ -137,11 +137,28 @@ test_model(std::vector<uint8_t> buf, std::string cache_dir, unsigned tolerance)
 }
 
 static void
-test_model_file(std::string file_name)
+test_model_file(std::string file_path)
 {
+   std::ostringstream cache_dir, model_cache;
+   std::string file_name = file_path.substr(file_path.find_last_of("/\\") + 1);
+   file_name = file_name.substr(0, file_name.find_last_of('.'));
+   cache_dir << "/var/cache/teflon_tests/" << file_name;
+   model_cache << cache_dir.str() << "/"
+               << "model.tflite";
+
+   if (cache_is_enabled()) {
+      if (access(cache_dir.str().c_str(), F_OK) != 0) {
+         ASSERT_TRUE(std::filesystem::create_directories(cache_dir.str().c_str()));
+      }
+
+      if (access(model_cache.str().c_str(), F_OK) != 0) {
+         std::filesystem::copy(file_path, model_cache.str());
+      }
+   }
+
    set_seed(4);
 
-   std::ifstream model_file(file_name, std::ios::binary);
+   std::ifstream model_file(file_path, std::ios::binary);
    std::vector<uint8_t> buffer((std::istreambuf_iterator<char>(model_file)),
                                std::istreambuf_iterator<char>());
    test_model(buffer, "", MODEL_TOLERANCE);
