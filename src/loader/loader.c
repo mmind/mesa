@@ -591,7 +591,7 @@ drm_get_pci_id_for_fd(int fd, int *vendor_id, int *chip_id)
    drmDevicePtr device;
 
    if (drmGetDevice2(fd, 0, &device) != 0) {
-      log_(_LOADER_WARNING, "MESA-LOADER: failed to retrieve device information\n");
+      //log_(_LOADER_WARNING, "MESA-LOADER: failed to retrieve device information\n");
       return false;
    }
 
