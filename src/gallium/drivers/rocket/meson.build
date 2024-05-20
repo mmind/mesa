@@ -32,3 +32,12 @@ shared_library('intercept',
    include_directories : [inc_include],
    c_args: ['-Wno-error=missing-prototypes', '-g', '-O0']
 )
+
+executable(
+  'test_kernel',
+  ['test_kernel.c'],
+  dependencies : [dep_libdrm],
+  include_directories : [
+    inc_include,
+  ],
+)
