@@ -5,7 +5,8 @@
 
 #include "rkt_ml.h"
 #include "rkt_registers.h"
-#include "drm-uapi/rknpu_ioctl.h"
+
+#include "drm-uapi/rocket_drm.h"
 
 #include "util/u_inlines.h"
 
@@ -944,37 +945,6 @@ fill_regcmd(struct rkt_ml_subgraph *subgraph, const struct rkt_operation *operat
 }
 
 static struct pipe_resource *
-fill_tasks(struct rkt_ml_subgraph *subgraph, struct rkt_operation *operation)
-{
-   struct pipe_context *pcontext = subgraph->base.context;
-   struct pipe_resource *rsc;
-   struct rknpu_task *tasks;
-   struct pipe_transfer *transfer = NULL;
-   unsigned num_tasks = util_dynarray_num_elements(&operation->tasks, struct split_task);
-   static unsigned op_idx = 1;
-
-   rsc = pipe_buffer_create(pcontext->screen, 0, PIPE_USAGE_DEFAULT, num_tasks * sizeof(*tasks));
-   tasks = pipe_buffer_map(pcontext, rsc, PIPE_MAP_WRITE, &transfer);
-
-   unsigned task_idx = 0;
-   util_dynarray_foreach(&operation->tasks, struct split_task, task) {
-      tasks[task_idx].flags  = 0x0;
-      tasks[task_idx].op_idx = op_idx++;
-      tasks[task_idx].enable_mask = 0x1d;
-      tasks[task_idx].int_mask = 0x300;
-      tasks[task_idx].int_clear = 0x1ffff;
-      tasks[task_idx].regcfg_amount = task->regcfg_amount - RKNPU_PC_DATA_EXTRA_AMOUNT;
-      tasks[task_idx].regcfg_offset = 0;
-      tasks[task_idx].regcmd_addr = task->regcfg_addr;
-      task_idx++;
-   }
-
-   pipe_buffer_unmap(pcontext, transfer);
-
-   return rsc;
-}
-
-static struct pipe_resource *
 fill_weights(struct rkt_ml_subgraph *subgraph, const struct pipe_ml_operation *poperation)
 {
    struct pipe_context *pcontext = subgraph->base.context;
@@ -1309,6 +1279,7 @@ count_tensors(const struct pipe_ml_operation *poperations,
          tensor_count = MAX2(tensor_count, poperation->add.input_tensor->index);
          break;
       default:
+         fprintf(stderr, "poperation->type %d\n", poperation->type);
          unreachable("Unsupported ML operation type");
       }
    }
@@ -1387,7 +1358,6 @@ rkt_ml_subgraph_create(struct pipe_context *pcontext,
    util_dynarray_foreach(&subgraph->operations, struct rkt_operation, operation) {
       split_tasks(subgraph, operation);
       compile_operation(subgraph, operation);
-      operation->tasks_bo = fill_tasks(subgraph, operation);
    }
 
    return &subgraph->base;
@@ -1448,37 +1418,18 @@ rkt_ml_subgraph_invoke(struct pipe_context *pcontext, struct pipe_ml_subgraph *p
    }
 
    util_dynarray_foreach(&subgraph->operations, struct rkt_operation, operation) {
-      unsigned num_tasks = util_dynarray_num_elements(&operation->tasks, struct split_task);
-      struct rknpu_submit submit = {
-         .flags = RKNPU_JOB_PC | RKNPU_JOB_BLOCK | RKNPU_JOB_PINGPONG,
-         .timeout = 500,
-         .task_start = 0,
-         .task_number = 3 * num_tasks,
-         .task_counter = 0,
-         .priority = 0,
-         .task_obj_addr = rkt_resource(operation->tasks_bo)->obj_addr,
-         .regcfg_obj_addr = 0,
-         .task_base_addr = 0,
-         .user_data = 0,
-         .core_mask = 1,
-         .fence_fd = -1,
-         .subcore_task = {
-            {
-               .task_start = 0,
-               .task_number = num_tasks,
-            },
-            {
-               .task_start = 0,
-               .task_number = num_tasks,
-            },
-            {
-               .task_start = 0,
-               .task_number = num_tasks,
-            },
-         },
-      };
-      ret = drmIoctl(screen->fd, DRM_IOCTL_RKNPU_SUBMIT, &submit);
-      //assert(ret >= 0);
+      uint64_t bo_handles = get_tensor(subgraph, operation->output_index)->handle;
+      util_dynarray_foreach(&operation->tasks, struct split_task, task) {
+
+         struct drm_rocket_submit submit = {
+            .regcmd = task->regcfg_addr,
+            .bo_handle_count = 1,
+            .bo_handles = (uint64_t)(uintptr_t)&bo_handles,
+         };
+
+         ret = drmIoctl(screen->fd, DRM_IOCTL_ROCKET_SUBMIT, &submit);
+         assert(ret == 0);
+      }
    }
 }
 
@@ -1535,7 +1486,6 @@ free_operation(struct rkt_operation *operation)
    pipe_resource_reference(&operation->regcmd, NULL);
    pipe_resource_reference(&operation->weights, NULL);
    pipe_resource_reference(&operation->biases, NULL);
-   pipe_resource_reference(&operation->tasks_bo, NULL);
 
    free(operation);
 }

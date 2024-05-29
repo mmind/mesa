@@ -39,6 +39,7 @@ struct rkt_resource {
    uint32_t handle;
    uint64_t phys_addr;
    uint64_t obj_addr;
+   uint64_t fake_offset;
    uint64_t bo_size;
 };
 

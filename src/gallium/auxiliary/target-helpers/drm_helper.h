@@ -438,8 +438,20 @@ pipe_rknpu_create_screen(int fd, const struct pipe_screen_config *config)
 
 DRM_DRIVER_DESCRIPTOR(rknpu, NULL, 0)
 
+static struct pipe_screen *
+pipe_rocket_create_screen(int fd, const struct pipe_screen_config *config)
+{
+   struct pipe_screen *screen;
+
+   screen = rkt_drm_screen_create(fd, config);
+   return screen ? debug_screen_wrap(screen) : NULL;
+}
+
+DRM_DRIVER_DESCRIPTOR(rocket, NULL, 0)
+
 #else
 DRM_DRIVER_DESCRIPTOR_STUB(rknpu)
+DRM_DRIVER_DESCRIPTOR_STUB(rocket)
 #endif
 
 #ifdef GALLIUM_KMSRO

@@ -11,8 +11,9 @@
 #include "util/u_inlines.h"
 #include "util/u_surface.h"
 #include "util/u_transfer.h"
-#include "drm-uapi/rknpu_ioctl.h"
 #include <xf86drm.h>
+
+#include "drm-uapi/rocket_drm.h"
 
 static void
 rkt_destroy_screen(struct pipe_screen *pscreen)
@@ -43,9 +44,8 @@ rkt_buffer_map(struct pipe_context *pctx, struct pipe_resource *prsc,
                  struct pipe_transfer **out_transfer)
 {
    struct rkt_screen *screen = rkt_screen(pctx->screen);
-   struct rkt_context *ctx = rkt_context(pctx);
    struct rkt_resource *rsc = rkt_resource(prsc);
-   struct rknpu_mem_map arg = {0,};
+   struct drm_rocket_prep_bo arg = {0};
    int ret;
 
    assert(level == 0);
@@ -55,14 +55,6 @@ rkt_buffer_map(struct pipe_context *pctx, struct pipe_resource *prsc,
    assert(box->height == 1);
    assert(box->depth == 1);
 
-   arg.handle = rsc->handle;
-
-   ret = drmIoctl(screen->fd, DRM_IOCTL_RKNPU_MEM_MAP, &arg);
-   assert(ret >= 0);
-
-   uint8_t *map = mmap(NULL, prsc->width0, PROT_READ | PROT_WRITE, MAP_SHARED, screen->fd, arg.offset);
-   assert(map != MAP_FAILED);
-
    struct pipe_transfer *transfer = rzalloc(NULL, struct pipe_transfer);
    transfer->level = level;
    transfer->usage = usage;
@@ -70,14 +62,20 @@ rkt_buffer_map(struct pipe_context *pctx, struct pipe_resource *prsc,
 
    pipe_resource_reference(&transfer->resource, prsc);
 
-   struct rknpu_mem_sync sync = {
-      .obj_addr = rsc->obj_addr,
-      .offset = 0,
-      .size = rsc->bo_size,
-      .flags = RKNPU_MEM_SYNC_FROM_DEVICE,
-   };
-   ret = drmIoctl(screen->fd, DRM_IOCTL_RKNPU_MEM_SYNC, &sync);
-   assert(ret == 0);
+   arg.handle = rsc->handle;
+   arg.timeout_ns = INT64_MAX;
+
+   arg.op = 0;
+   if (usage & PIPE_MAP_READ)
+      arg.op |= ROCKET_PREP_READ;
+   if (usage & PIPE_MAP_WRITE)
+      arg.op |= ROCKET_PREP_WRITE;
+
+   ret = drmIoctl(screen->fd, DRM_IOCTL_ROCKET_PREP_BO, &arg);
+   assert(ret != -1);
+
+   uint8_t *map = os_mmap(NULL, prsc->width0, PROT_READ | PROT_WRITE, MAP_SHARED, screen->fd, rsc->fake_offset);
+   assert(map != MAP_FAILED);
 
    *out_transfer = transfer;
 
@@ -89,15 +87,13 @@ rkt_buffer_unmap(struct pipe_context *pctx, struct pipe_transfer *transfer)
 {
    struct rkt_screen *screen = rkt_screen(pctx->screen);
    struct rkt_resource *rsrc = rkt_resource(transfer->resource);
+   struct drm_rocket_fini_bo arg = {0};
    int ret;
-   struct rknpu_mem_sync arg = {
-      .obj_addr = rsrc->obj_addr,
-      .offset = 0,
-      .size = rsrc->bo_size,
-      .flags = RKNPU_MEM_SYNC_TO_DEVICE,
-   };
-   ret = drmIoctl(screen->fd, DRM_IOCTL_RKNPU_MEM_SYNC, &arg);
-   assert(ret == 0);
+
+   arg.handle = rsrc->handle;
+
+   ret = drmIoctl(screen->fd, DRM_IOCTL_ROCKET_FINI_BO, &arg);
+   assert(ret >= 0);
 
    pipe_resource_reference(&transfer->resource, NULL);
    ralloc_free(transfer);
@@ -128,22 +124,6 @@ rkt_create_context(struct pipe_screen *screen, void *priv, unsigned flags)
    pctx->ml_subgraph_read_output = rkt_ml_subgraph_read_outputs;
    pctx->ml_subgraph_destroy = rkt_ml_subgraph_destroy;
 
-   /*
-   pctx->flush = rkt_flush;
-   pctx->clear = rkt_clear;
-   pctx->flush_resource = rkt_flush_resource;
-
-
-   pctx->set_debug_callback = u_default_set_debug_callback;
-   pctx->invalidate_resource = rkt_invalidate_resource;
-   pctx->memory_barrier = rkt_memory_barrier;
-
-   pctx->create_fence_fd = rkt_create_fence_fd;
-   pctx->fence_server_sync = rkt_fence_server_sync;
-
-   pctx->get_device_reset_status = asahi_get_device_reset_status;
-   */
-
    return pctx;
 }
 
@@ -152,8 +132,8 @@ rkt_resource_create(struct pipe_screen *pscreen,
                       const struct pipe_resource *templat)
 {
    struct rkt_screen *screen = rkt_screen(pscreen);
+   struct drm_rocket_create_bo arg = {0};
    struct rkt_resource *rsc;
-   struct rknpu_mem_create arg = {0};
    int ret;
 
    assert(templat->target == PIPE_BUFFER);
@@ -173,14 +153,14 @@ rkt_resource_create(struct pipe_screen *pscreen,
    rsc->bo_size = templat->width0;
 
    arg.size = templat->width0;
-   arg.flags = RKNPU_MEM_NON_CONTIGUOUS | RKNPU_MEM_CACHEABLE | RKNPU_MEM_KERNEL_MAPPING | RKNPU_MEM_ZEROING;
 
-   ret = drmIoctl(screen->fd, DRM_IOCTL_RKNPU_MEM_CREATE, &arg);
-   assert(ret >= 0);
+   ret = drmIoctl(screen->fd, DRM_IOCTL_ROCKET_CREATE_BO, &arg);
+   if (ret < 0)
+      goto free_rsc;
 
    rsc->handle = arg.handle;
-   rsc->phys_addr = arg.dma_addr;
-   rsc->obj_addr = arg.obj_addr;
+   rsc->phys_addr = arg.dma_address;
+   rsc->fake_offset = arg.offset;
 
 #if 0
    if (DBG_ENABLED(ROCKET_DBG_ZERO)) {
@@ -201,14 +181,14 @@ free_rsc:
 static void
 rkt_resource_destroy(struct pipe_screen *pscreen, struct pipe_resource *prsc)
 {
-   struct rkt_screen *screen = rkt_screen(pscreen);
    struct rkt_resource *rsc = rkt_resource(prsc);
-   struct rknpu_mem_destroy arg = {0};
+   struct rkt_screen *screen = rkt_screen(pscreen);
+   struct drm_gem_close arg = {0};
    int ret;
 
    arg.handle = rsc->handle;
 
-   ret = drmIoctl(screen->fd, DRM_IOCTL_RKNPU_MEM_DESTROY, &arg);
+   ret = drmIoctl(screen->fd, DRM_IOCTL_GEM_CLOSE, &arg);
    assert(ret >= 0);
 
    ralloc_free(rsc);
@@ -244,14 +224,6 @@ rkt_screen_create(int fd, const struct pipe_screen_config *config, struct render
    screen->context_create = rkt_create_context;
    screen->resource_create = rkt_resource_create;
    screen->resource_destroy = rkt_resource_destroy;
-
-   struct rknpu_action action = {
-      .flags = RKNPU_SET_PROC_NICE,
-      .value = 0xffffffed,
-   };
-
-   ret = drmIoctl(fd, DRM_IOCTL_RKNPU_ACTION, &action);
-   assert(ret >= 0);
 
    return screen;
 }

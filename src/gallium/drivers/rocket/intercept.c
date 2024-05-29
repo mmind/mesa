@@ -79,6 +79,7 @@ static struct bo *
 find_bo(uint64_t dma_address, unsigned *offset)
 {
    for (int j = 0; j < context.next_handle_id; j++) {
+      fprintf(stderr, "needle %lx hay %lx i %d\n", dma_address, context.bos[j].dma_addr, j);
       if (dma_address >= context.bos[j].dma_addr &&
           dma_address < context.bos[j].dma_addr + context.bos[j].size) {
          *offset = dma_address - context.bos[j].dma_addr;
@@ -94,6 +95,8 @@ dump_buffer(const char *name, uint64_t dma_address, unsigned size)
 {
    unsigned offset = 0;
    struct bo *bo = find_bo(dma_address, &offset);
+
+   fprintf(stderr, "dump_buffer name %s dma 0x%lx size %u bo %p\n", name, dma_address, size, bo);
 
    if (size == 0 || size + offset > bo->size)
       size = bo->size - offset;
@@ -196,6 +199,12 @@ handle_submit(struct rknpu_submit *args, uint32_t *output_address)
          }
       }
 
+      fprintf(stderr, "weights_address %x\n", weights_address);
+      fprintf(stderr, "input_address %x\n", input_address);
+      fprintf(stderr, "output_address %x\n", *output_address);
+      fprintf(stderr, "biases_address %x\n", biases_address);
+      fprintf(stderr, "eltwise_address %x\n", eltwise_address);
+
       if (weights_address != 0x0) {
          sprintf(name, "weights%d.bin", task_id);
          dump_buffer(name, weights_address, 0);
@@ -256,6 +265,7 @@ handle_mem_create(struct rknpu_mem_create *args)
     context.bos[context.next_handle_id].obj_addr = args->obj_addr;
     context.bos[context.next_handle_id].dma_addr = args->dma_addr;
 
+    fprintf(stderr, "%s: dma_addr %llx\n", __func__, args->dma_addr);
     context.next_handle_id++;
 
     return ret;

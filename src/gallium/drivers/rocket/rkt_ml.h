@@ -67,7 +67,6 @@ struct rkt_operation {
    struct pipe_resource *regcmd;
    struct pipe_resource *weights;
    struct pipe_resource *biases;
-   struct pipe_resource *tasks_bo;
 
    bool depthwise;
    bool reuse_weights_cbuf;
