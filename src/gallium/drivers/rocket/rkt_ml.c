@@ -8,9 +8,11 @@
 
 #include "drm-uapi/rocket_drm.h"
 
+#include "util/macros.h"
 #include "util/u_inlines.h"
 
 #include <xf86drm.h>
+#include <fcntl.h>
 
 // http://nvdla.org/hw/v1/ias/unit_description.html#convolution-buffer
 #define CBUF_BANK_SIZE 32768
@@ -20,6 +22,21 @@
 #define FEATURE_ATOMIC_SIZE 16
 #define WEIGHT_ATOMIC_SIZE 32
 #define ATOMIC_K_SIZE 16
+
+static void
+trace_printk(const char *restrict format, ...)
+{
+   static int fd = -1;
+   if (unlikely(fd == -1)) {
+      fd = open("/sys/kernel/tracing/trace_marker", O_WRONLY);
+      assert(fd >= 0);
+   }
+
+   va_list args;
+   va_start(args, format);
+   vdprintf(fd, format, args);
+   va_end(args);
+}
 
 static void
 create_tensor(struct rkt_ml_subgraph *subgraph, unsigned idx, unsigned size)
@@ -1374,6 +1391,8 @@ rkt_ml_subgraph_invoke(struct pipe_context *pcontext, struct pipe_ml_subgraph *p
    unsigned output_channels = operation->output_channels;
    int ret;
 
+   trace_printk("Processing input\n");
+#if 0
    struct rkt_resource *input_tensor = get_tensor(subgraph, operation->input_index);
    if (output_channels == 1 && input_channels == 1 && !operation->addition_input && (operation->add_tensor == 0)) {
       pipe_buffer_copy(pcontext, &input_tensor->base, input->resource, 0, 0, pipe_buffer_size(input->resource));
@@ -1384,6 +1403,8 @@ rkt_ml_subgraph_invoke(struct pipe_context *pcontext, struct pipe_ml_subgraph *p
       struct pipe_transfer *transfer_in, *transfer_out;
       uint8_t (*input_in)[input_height][input_channels] = (void*)pipe_buffer_map(pcontext, input->resource, PIPE_MAP_READ, &transfer_in);
       uint8_t *map = pipe_buffer_map(pcontext, &input_tensor->base, PIPE_MAP_WRITE, &transfer_out);
+
+      trace_printk("Converting data\n");
 
       if (input_channels == 1) {
          unsigned n = 0;
@@ -1412,11 +1433,16 @@ rkt_ml_subgraph_invoke(struct pipe_context *pcontext, struct pipe_ml_subgraph *p
          }
       }
 
+      trace_printk("Converted data\n");
+
       pipe_buffer_unmap(pcontext, transfer_out);
 
       pipe_buffer_unmap(pcontext, transfer_in);
    }
+#endif
+   trace_printk("Processed input\n");
 
+   trace_printk("Submitting graph\n");
    util_dynarray_foreach(&subgraph->operations, struct rkt_operation, operation) {
       uint64_t bo_handles = get_tensor(subgraph, operation->output_index)->handle;
       util_dynarray_foreach(&operation->tasks, struct split_task, task) {
@@ -1427,10 +1453,13 @@ rkt_ml_subgraph_invoke(struct pipe_context *pcontext, struct pipe_ml_subgraph *p
             .bo_handles = (uint64_t)(uintptr_t)&bo_handles,
          };
 
+         //trace_printk("Submitting job\n");
          ret = drmIoctl(screen->fd, DRM_IOCTL_ROCKET_SUBMIT, &submit);
+         //trace_printk("Submitted job\n");
          assert(ret == 0);
       }
    }
+   trace_printk("Submitted graph\n");
 }
 
 void
@@ -1438,6 +1467,8 @@ rkt_ml_subgraph_read_outputs(struct pipe_context *pcontext, struct pipe_ml_subgr
                               unsigned outputs_count, unsigned output_idxs[], void *outputs[])
 {
    struct rkt_ml_subgraph *subgraph = (struct rkt_ml_subgraph *)(psubgraph);
+
+   trace_printk("Processing output\n");
 
    for (int i = 0; i < outputs_count; i++) {
 
@@ -1451,6 +1482,7 @@ rkt_ml_subgraph_read_outputs(struct pipe_context *pcontext, struct pipe_ml_subgr
       uint8_t *weights_out;
 
       raw_output = pipe_buffer_map(pcontext, &output_tensor->base, PIPE_MAP_READ, &transfer);
+#if 0
       output_in = (void *)raw_output;
       output_out = (void *)outputs[i];
 
@@ -1475,8 +1507,12 @@ rkt_ml_subgraph_read_outputs(struct pipe_context *pcontext, struct pipe_ml_subgr
          }
       }
 
+#endif
+
       pipe_buffer_unmap(pcontext, transfer);
    }
+
+   trace_printk("Processed output\n");
 }
 
 static void
