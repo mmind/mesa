@@ -9,6 +9,7 @@
 #include "drm-uapi/rocket_drm.h"
 
 #include "util/macros.h"
+#include "util/u_dynarray.h"
 #include "util/u_inlines.h"
 
 #include <xf86drm.h>
@@ -1319,6 +1320,7 @@ rkt_ml_subgraph_create(struct pipe_context *pcontext,
 
    tensor_count = count_tensors(poperations, count);
    util_dynarray_init(&subgraph->tensors, NULL);
+   util_dynarray_init(&subgraph->operations, NULL);
    if (!util_dynarray_resize(&subgraph->tensors, struct pipe_resource *, tensor_count))
       return NULL;
    memset(util_dynarray_begin(&subgraph->tensors), 0, subgraph->tensors.size);
@@ -1443,22 +1445,64 @@ rkt_ml_subgraph_invoke(struct pipe_context *pcontext, struct pipe_ml_subgraph *p
    trace_printk("Processed input\n");
 
    trace_printk("Submitting graph\n");
+
+   #define MAX_TASKS 16
+
+   struct util_dynarray jobs;
+   util_dynarray_init(&jobs, NULL);
+
    util_dynarray_foreach(&subgraph->operations, struct rkt_operation, operation) {
-      uint64_t bo_handles = get_tensor(subgraph, operation->output_index)->handle;
-      util_dynarray_foreach(&operation->tasks, struct split_task, task) {
+      uint64_t in_bo_handles = get_tensor(subgraph, operation->input_index)->handle;
+      uint64_t out_bo_handles = get_tensor(subgraph, operation->output_index)->handle;
 
-         struct drm_rocket_submit submit = {
-            .regcmd = task->regcfg_addr,
-            .bo_handle_count = 1,
-            .bo_handles = (uint64_t)(uintptr_t)&bo_handles,
-         };
+      if (operation->reuse_weights_cbuf) {
+         /* Submit all tasks to the same core, so weights can be reused */
+         unsigned num_tasks = util_dynarray_num_elements(&operation->tasks, struct split_task);
+         struct drm_rocket_task *tasks = calloc(num_tasks, sizeof(*tasks));
+         unsigned task_count = 0;
+         util_dynarray_foreach(&operation->tasks, struct split_task, task) {
+            tasks[task_count].regcmd = task->regcfg_addr;
+            tasks[task_count].regcmd_count = task->regcfg_amount;
+            task_count++;
+         }
+         struct drm_rocket_job job = {0};
+         job.in_bo_handles = (uint64_t)(uintptr_t)&in_bo_handles,
+         job.in_bo_handle_count = 1;
+         job.out_bo_handles = (uint64_t)(uintptr_t)&out_bo_handles,
+         job.out_bo_handle_count = 1;
+         job.tasks = (uint64_t)tasks;
+         job.task_count = task_count;
+         util_dynarray_append(&jobs, struct drm_rocket_job, job);
+      } else {
+         /* Spread tasks among cores, for parallelism */
+         util_dynarray_foreach(&operation->tasks, struct split_task, task) {
+            struct drm_rocket_task *ktask = calloc(1, sizeof(*ktask));
+            ktask->regcmd = task->regcfg_addr;
+            ktask->regcmd_count = task->regcfg_amount;
 
-         //trace_printk("Submitting job\n");
-         ret = drmIoctl(screen->fd, DRM_IOCTL_ROCKET_SUBMIT, &submit);
-         //trace_printk("Submitted job\n");
-         assert(ret == 0);
+            struct drm_rocket_job job = {0};
+            job.in_bo_handles = (uint64_t)(uintptr_t)&in_bo_handles,
+            job.in_bo_handle_count = 1;
+            job.out_bo_handles = (uint64_t)(uintptr_t)&out_bo_handles,
+            job.out_bo_handle_count = 1;
+            job.tasks = (uint64_t)ktask;
+            job.task_count = 1;
+            util_dynarray_append(&jobs, struct drm_rocket_job, job);
+         }
       }
    }
+
+   struct drm_rocket_submit submit = {
+      .jobs = (uint64_t)util_dynarray_begin(&jobs),
+      .job_count = util_dynarray_num_elements(&jobs, struct drm_rocket_job),
+   };
+
+   ret = drmIoctl(screen->fd, DRM_IOCTL_ROCKET_SUBMIT, &submit);
+   assert(ret == 0);
+
+   /* TODO: Free all the stuff */
+   util_dynarray_fini(&jobs);
+
    trace_printk("Submitted graph\n");
 }
 
