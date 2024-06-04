@@ -88,29 +88,56 @@ struct drm_rocket_fini_bo {
 };
 
 /**
- * struct drm_rocket_submit - ioctl argument for submitting commands to the NPU.
+ * struct drm_rocket_task - A task to be run on the NPU
  *
- * This asks the kernel to have the NPU execute a register command list.
+ * A task is the smallest unit of work that can be run on the NPU.
  */
-struct drm_rocket_submit {
-
+struct drm_rocket_task {
        /** DMA address to NPU mapping of register command buffer */
        __u64 regcmd;
 
-       /** An optional array of sync objects to wait on before starting this job. */
-       __u64 in_syncs;
+       /** Number of commands in the register command buffer */
+       __u32 regcmd_count;
+};
 
-       /** Number of sync objects to wait on before starting this job. */
-       __u32 in_sync_count;
+/**
+ * struct drm_rocket_job - A job to be run on the NPU
+ *
+ * The kernel will schedule the execution of this job taking into account its
+ * dependencies with other jobs. All tasks in the same job will be executed
+ * sequentially on the same core, to benefit from memory residency in SRAM.
+ */
+struct drm_rocket_job {
+       /** Pointer to an array of struct drm_rocket_task. */
+       __u64 tasks;
 
-       /** An optional sync object to place the completion fence in. */
-       __u32 out_sync;
+       /** Number of tasks passed in. */
+       __u32 task_count;
 
-       /** Pointer to a u32 array of the BOs that are referenced by the job. */
-       __u64 bo_handles;
+       /** Pointer to a u32 array of the BOs that are read by the job. */
+       __u64 in_bo_handles;
 
-       /** Number of BO handles passed in (size is that times 4). */
-       __u32 bo_handle_count;
+       /** Number of input BO handles passed in (size is that times 4). */
+       __u32 in_bo_handle_count;
+
+       /** Pointer to a u32 array of the BOs that are written to by the job. */
+       __u64 out_bo_handles;
+
+       /** Number of output BO handles passed in (size is that times 4). */
+       __u32 out_bo_handle_count;
+};
+
+/**
+ * struct drm_rocket_submit - ioctl argument for submitting commands to the NPU.
+ *
+ * The kernel will schedule the execution of these jobs in dependency order.
+ */
+struct drm_rocket_submit {
+       /** Pointer to an array of struct drm_rocket_job. */
+       __u64 jobs;
+
+       /** Number of jobs passed in. */
+       __u32 job_count;
 };
 
 #if defined(__cplusplus)
