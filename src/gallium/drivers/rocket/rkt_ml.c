@@ -1394,7 +1394,7 @@ rkt_ml_subgraph_invoke(struct pipe_context *pcontext, struct pipe_ml_subgraph *p
    int ret;
 
    trace_printk("Processing input\n");
-#if 0
+#if 1
    struct rkt_resource *input_tensor = get_tensor(subgraph, operation->input_index);
    if (output_channels == 1 && input_channels == 1 && !operation->addition_input && (operation->add_tensor == 0)) {
       pipe_buffer_copy(pcontext, &input_tensor->base, input->resource, 0, 0, pipe_buffer_size(input->resource));
@@ -1526,7 +1526,9 @@ rkt_ml_subgraph_read_outputs(struct pipe_context *pcontext, struct pipe_ml_subgr
       uint8_t *weights_out;
 
       raw_output = pipe_buffer_map(pcontext, &output_tensor->base, PIPE_MAP_READ, &transfer);
-#if 0
+#if 1
+      trace_printk("Converting data\n");
+
       output_in = (void *)raw_output;
       output_out = (void *)outputs[i];
 
@@ -1550,6 +1552,8 @@ rkt_ml_subgraph_read_outputs(struct pipe_context *pcontext, struct pipe_ml_subgr
             }
          }
       }
+
+      trace_printk("Converted data\n");
 
 #endif
 
