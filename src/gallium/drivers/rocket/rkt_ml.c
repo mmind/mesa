@@ -12,6 +12,7 @@
 #include "util/u_dynarray.h"
 #include "util/u_inlines.h"
 
+#include <stdint.h>
 #include <xf86drm.h>
 #include <fcntl.h>
 
@@ -1452,8 +1453,16 @@ rkt_ml_subgraph_invoke(struct pipe_context *pcontext, struct pipe_ml_subgraph *p
    util_dynarray_init(&jobs, NULL);
 
    util_dynarray_foreach(&subgraph->operations, struct rkt_operation, operation) {
-      uint64_t in_bo_handles = get_tensor(subgraph, operation->input_index)->handle;
-      uint64_t out_bo_handles = get_tensor(subgraph, operation->output_index)->handle;
+      unsigned num_inputs = operation->add_tensor ? 2 : 1;
+      uint32_t *in_bo_handles = calloc(num_inputs, sizeof(uint32_t));
+      uint32_t *out_bo_handles = malloc(sizeof(uint32_t));
+
+      in_bo_handles[0] = get_tensor(subgraph, operation->input_index)->handle;
+
+      if (operation->add_tensor != NULL)
+         in_bo_handles[1] = get_tensor(subgraph, operation->add_tensor)->handle;
+
+      out_bo_handles[0] = get_tensor(subgraph, operation->output_index)->handle;
 
       if (operation->reuse_weights_cbuf) {
          /* Submit all tasks to the same core, so weights can be reused */
@@ -1466,9 +1475,9 @@ rkt_ml_subgraph_invoke(struct pipe_context *pcontext, struct pipe_ml_subgraph *p
             task_count++;
          }
          struct drm_rocket_job job = {0};
-         job.in_bo_handles = (uint64_t)(uintptr_t)&in_bo_handles,
-         job.in_bo_handle_count = 1;
-         job.out_bo_handles = (uint64_t)(uintptr_t)&out_bo_handles,
+         job.in_bo_handles = (uint64_t)(uintptr_t)in_bo_handles;
+         job.in_bo_handle_count = num_inputs;
+         job.out_bo_handles = (uint64_t)(uintptr_t)out_bo_handles;
          job.out_bo_handle_count = 1;
          job.tasks = (uint64_t)tasks;
          job.task_count = task_count;
@@ -1481,9 +1490,9 @@ rkt_ml_subgraph_invoke(struct pipe_context *pcontext, struct pipe_ml_subgraph *p
             ktask->regcmd_count = task->regcfg_amount;
 
             struct drm_rocket_job job = {0};
-            job.in_bo_handles = (uint64_t)(uintptr_t)&in_bo_handles,
-            job.in_bo_handle_count = 1;
-            job.out_bo_handles = (uint64_t)(uintptr_t)&out_bo_handles,
+            job.in_bo_handles = (uint64_t)(uintptr_t)in_bo_handles;
+            job.in_bo_handle_count = num_inputs;
+            job.out_bo_handles = (uint64_t)(uintptr_t)out_bo_handles;
             job.out_bo_handle_count = 1;
             job.tasks = (uint64_t)ktask;
             job.task_count = 1;
