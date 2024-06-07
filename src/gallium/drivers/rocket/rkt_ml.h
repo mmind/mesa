@@ -97,7 +97,7 @@ struct rkt_operation {
    uint8_t weights_zero_point;
    float weights_scale;
 
-   unsigned add_tensor;
+   unsigned add_tensor; /* TODO: change to signed, initialize to -1, and check for that value*/
 
    struct util_dynarray tasks;   /* struct split_task */
 };
