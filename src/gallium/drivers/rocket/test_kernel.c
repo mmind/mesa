@@ -10,7 +10,7 @@
 #include <errno.h>
 
 #include "rkt_registers.h"
-#include "drm-uapi/rocket_drm.h"
+#include "drm-uapi/rocket_accel.h"
 
 uint8_t regcmd_blob[] = {
   0x40, 0x10, 0xb1, 0x00, 0x00, 0x00, 0x01, 0x02, 0x04, 0x11, 0x00, 0x00,

@@ -21,50 +21,20 @@ extern "C" {
 #define DRM_IOCTL_ROCKET_FINI_BO		DRM_IOW(DRM_COMMAND_BASE + DRM_ROCKET_FINI_BO, struct drm_rocket_fini_bo)
 #define DRM_IOCTL_ROCKET_SUBMIT			DRM_IOW(DRM_COMMAND_BASE + DRM_ROCKET_SUBMIT, struct drm_rocket_submit)
 
-/* Please note that modifications to all structs defined here are
- * subject to backwards-compatibility constraints:
- *  1) Do not use pointers, use __u64 instead for 32 bit / 64 bit
- *     user/kernel compatibility
- *  2) Keep fields aligned to their size
- *  3) Because of how drm_ioctl() works, we can add new fields at
- *     the end of an ioctl if some care is taken: drm_ioctl() will
- *     zero out the new fields at the tail of the ioctl, so a zero
- *     value should have a backwards compatible meaning.  And for
- *     output params, userspace won't see the newly added output
- *     fields.. so that has to be somehow ok.
- */
-
-/* timeouts are specified in clock-monotonic absolute times (to simplify
- * restarting interrupted ioctls).  The following struct is logically the
- * same as 'struct timespec' but 32/64b ABI safe.
- */
-struct drm_rocket_timespec {
-	__s64 tv_sec;          /* seconds */
-	__s64 tv_nsec;         /* nanoseconds */
-};
-
 /**
  * struct drm_rocket_create_bo - ioctl argument for creating Rocket BOs.
  *
- * The flags argument is a bit mask of ROCKET_BO_* flags.
  */
 struct drm_rocket_create_bo {
 	__u32 size;
-	__u32 flags;
 
 	/** Returned GEM handle for the BO. */
 	__u32 handle;
-
-	/** Pad, must be zero-filled. */
-	__u32 pad;
 
 	/**
 	 * Returned DMA address for the BO in the NPU address space.  This address
 	 * is private to the DRM fd and is valid for the lifetime of the GEM
 	 * handle.
-	 *
-	 * This address value will always be nonzero, since various HW
-	 * units treat 0 specially.
 	 */
 	__u64 dma_address;
 
@@ -74,7 +44,6 @@ struct drm_rocket_create_bo {
 
 #define ROCKET_PREP_READ        0x01
 #define ROCKET_PREP_WRITE       0x02
-#define ROCKET_PREP_NOSYNC      0x04
 
 struct drm_rocket_prep_bo {
 	__u32 handle;		/* in */
