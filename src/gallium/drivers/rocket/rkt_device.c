@@ -13,7 +13,7 @@
 #include "util/u_transfer.h"
 #include <xf86drm.h>
 
-#include "drm-uapi/rocket_drm.h"
+#include "drm-uapi/rocket_accel.h"
 
 static void
 rkt_destroy_screen(struct pipe_screen *pscreen)

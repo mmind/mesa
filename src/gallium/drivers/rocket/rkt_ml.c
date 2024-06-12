@@ -6,7 +6,7 @@
 #include "rkt_ml.h"
 #include "rkt_registers.h"
 
-#include "drm-uapi/rocket_drm.h"
+#include "drm-uapi/rocket_accel.h"
 
 #include "util/macros.h"
 #include "util/u_dynarray.h"
