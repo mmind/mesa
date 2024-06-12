@@ -47,6 +47,12 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 </enum>
 
 <domain name="PC" width="32">
+   <reg32 offset="0x0000" name="VERSION">
+      <bitfield name="VERSION" low="0" high="31" type="uint"/>
+   </reg32>
+   <reg32 offset="0x0004" name="VERSION_NUM">
+      <bitfield name="VERSION_NUM" low="0" high="31" type="uint"/>
+   </reg32>
    <reg32 offset="0x0008" name="OPERATION_ENABLE">
       <bitfield name="RESERVED_0" low="1" high="31" type="uint"/>
       <bitfield name="OP_EN" pos="0" type="uint"/>
@@ -61,20 +67,72 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       <bitfield name="PC_DATA_AMOUNT" low="0" high="15" type="uint"/>
    </reg32>
    <reg32 offset="0x0020" name="INTERRUPT_MASK">
-      <bitfield name="RESERVED_0" low="17" high="31" type="uint"/>
-      <bitfield name="INT_MASK" low="0" high="16" type="uint"/>
+      <bitfield name="RESERVED_0" low="14" high="31" type="uint"/>
+      <bitfield name="DMA_WRITE_ERROR" pos="13" type="boolean"/>
+      <bitfield name="DMA_READ_ERROR" pos="12" type="boolean"/>
+      <bitfield name="PPU_1" pos="11" type="boolean"/>
+      <bitfield name="PPU_0" pos="10" type="boolean"/>
+      <bitfield name="DPU_1" pos="9" type="boolean"/>
+      <bitfield name="DPU_0" pos="8" type="boolean"/>
+      <bitfield name="CORE_1" pos="7" type="boolean"/>
+      <bitfield name="CORE_0" pos="6" type="boolean"/>
+      <bitfield name="CNA_CSC_1" pos="5" type="boolean"/>
+      <bitfield name="CNA_CSC_0" pos="4" type="boolean"/>
+      <bitfield name="CNA_WEIGHT_1" pos="3" type="boolean"/>
+      <bitfield name="CNA_WEIGHT_0" pos="2" type="boolean"/>
+      <bitfield name="CNA_FEATURE_1" pos="1" type="boolean"/>
+      <bitfield name="CNA_FEATURE_0" pos="0" type="boolean"/>
    </reg32>
    <reg32 offset="0x0024" name="INTERRUPT_CLEAR">
-      <bitfield name="RESERVED_0" low="17" high="31" type="uint"/>
-      <bitfield name="INT_CLR" low="0" high="16" type="uint"/>
+      <bitfield name="RESERVED_0" low="14" high="31" type="uint"/>
+      <bitfield name="DMA_WRITE_ERROR" pos="13" type="boolean"/>
+      <bitfield name="DMA_READ_ERROR" pos="12" type="boolean"/>
+      <bitfield name="PPU_1" pos="11" type="boolean"/>
+      <bitfield name="PPU_0" pos="10" type="boolean"/>
+      <bitfield name="DPU_1" pos="9" type="boolean"/>
+      <bitfield name="DPU_0" pos="8" type="boolean"/>
+      <bitfield name="CORE_1" pos="7" type="boolean"/>
+      <bitfield name="CORE_0" pos="6" type="boolean"/>
+      <bitfield name="CNA_CSC_1" pos="5" type="boolean"/>
+      <bitfield name="CNA_CSC_0" pos="4" type="boolean"/>
+      <bitfield name="CNA_WEIGHT_1" pos="3" type="boolean"/>
+      <bitfield name="CNA_WEIGHT_0" pos="2" type="boolean"/>
+      <bitfield name="CNA_FEATURE_1" pos="1" type="boolean"/>
+      <bitfield name="CNA_FEATURE_0" pos="0" type="boolean"/>
    </reg32>
    <reg32 offset="0x0028" name="INTERRUPT_STATUS">
-      <bitfield name="RESERVED_0" low="17" high="31" type="uint"/>
-      <bitfield name="INT_ST" low="0" high="16" type="uint"/>
+      <bitfield name="RESERVED_0" low="14" high="31" type="uint"/>
+      <bitfield name="DMA_WRITE_ERROR" pos="13" type="boolean"/>
+      <bitfield name="DMA_READ_ERROR" pos="12" type="boolean"/>
+      <bitfield name="PPU_1" pos="11" type="boolean"/>
+      <bitfield name="PPU_0" pos="10" type="boolean"/>
+      <bitfield name="DPU_1" pos="9" type="boolean"/>
+      <bitfield name="DPU_0" pos="8" type="boolean"/>
+      <bitfield name="CORE_1" pos="7" type="boolean"/>
+      <bitfield name="CORE_0" pos="6" type="boolean"/>
+      <bitfield name="CNA_CSC_1" pos="5" type="boolean"/>
+      <bitfield name="CNA_CSC_0" pos="4" type="boolean"/>
+      <bitfield name="CNA_WEIGHT_1" pos="3" type="boolean"/>
+      <bitfield name="CNA_WEIGHT_0" pos="2" type="boolean"/>
+      <bitfield name="CNA_FEATURE_1" pos="1" type="boolean"/>
+      <bitfield name="CNA_FEATURE_0" pos="0" type="boolean"/>
    </reg32>
    <reg32 offset="0x002C" name="INTERRUPT_RAW_STATUS">
-      <bitfield name="RESERVED_0" low="17" high="31" type="uint"/>
-      <bitfield name="INT_RAW_ST" low="0" high="16" type="uint"/>
+      <bitfield name="RESERVED_0" low="14" high="31" type="uint"/>
+      <bitfield name="DMA_WRITE_ERROR" pos="13" type="boolean"/>
+      <bitfield name="DMA_READ_ERROR" pos="12" type="boolean"/>
+      <bitfield name="PPU_1" pos="11" type="boolean"/>
+      <bitfield name="PPU_0" pos="10" type="boolean"/>
+      <bitfield name="DPU_1" pos="9" type="boolean"/>
+      <bitfield name="DPU_0" pos="8" type="boolean"/>
+      <bitfield name="CORE_1" pos="7" type="boolean"/>
+      <bitfield name="CORE_0" pos="6" type="boolean"/>
+      <bitfield name="CNA_CSC_1" pos="5" type="boolean"/>
+      <bitfield name="CNA_CSC_0" pos="4" type="boolean"/>
+      <bitfield name="CNA_WEIGHT_1" pos="3" type="boolean"/>
+      <bitfield name="CNA_WEIGHT_0" pos="2" type="boolean"/>
+      <bitfield name="CNA_FEATURE_1" pos="1" type="boolean"/>
+      <bitfield name="CNA_FEATURE_0" pos="0" type="boolean"/>
    </reg32>
    <reg32 offset="0x0030" name="TASK_CON">
       <bitfield name="RESERVED_0" low="14" high="31" type="uint"/>
