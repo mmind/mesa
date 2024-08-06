@@ -28,7 +28,8 @@ driver_rkt = declare_dependency(
 )
 
 shared_library('intercept',
-   files('intercept.c'),
+   [files('intercept.c'), rkt_registers],
    include_directories : [inc_include],
+   dependencies : [dep_libdrm],
    c_args: ['-Wno-error=missing-prototypes', '-g', '-O0']
 )
