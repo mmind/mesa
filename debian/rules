@@ -178,7 +178,6 @@ confflags_GALLIUM += -Dgallium-drivers="[$(GALLIUM_DRIVERS_LIST)]"
 
 confflags += \
 	-Ddri-drivers-path=/usr/lib/$(DEB_HOST_MULTIARCH)/dri \
-	-Ddri-search-path='/usr/lib/$(DEB_HOST_MULTIARCH)/dri:\$$$${ORIGIN}/dri:/usr/lib/dri' \
 	-Dplatforms="[$(EGL_PLATFORMS_LIST)]" \
 	-Dvulkan-drivers="[$(VULKAN_DRIVERS_LIST)]" \
 	-Dvulkan-layers="[$(VULKAN_LAYERS_LIST)]" \
