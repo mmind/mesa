@@ -1,8 +1,39 @@
-mesa (24.2.2-1+rocket) unstable; urgency=medium
+mesa (24.3.0~rc1+rocket-1) unstable; urgency=medium
 
+  * New upstream release candidate.
   * Enable Rocket driver.
+  * Enable Panfrost Vulkan driver.
 
- -- Heiko Stuebner <mmind@debian.org>  Fri, 06 Sep 2024 07:13:53 +0300
+ -- Heiko Stuebner <mmind@debian.org>  Tue, 11 Nov 2024 07:13:53 +0300
+
+mesa (24.2.6-1) unstable; urgency=medium
+
+  * New upstream release.
+  * fix-armhf-build.diff: Dropped, upstream.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Tue, 05 Nov 2024 09:59:12 +0200
+
+mesa (24.2.4-1) unstable; urgency=medium
+
+  * New upstream release.
+  * clc-find-opencl-headers.diff: Dropped, upstream.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Thu, 03 Oct 2024 22:18:55 +0300
+
+mesa (24.2.3-1) unstable; urgency=medium
+
+  * New upstream release.
+  * patches: Fix build on armel/armhf with llvm-19.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Fri, 20 Sep 2024 21:57:00 +0300
+
+mesa (24.2.2-1+exp1) experimental; urgency=medium
+
+  * rules: Migrate to llvm-19.
+  * clc-find-opencl-headers.diff: Fix finding the opencl headers with
+    llvm-19.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Tue, 17 Sep 2024 14:43:27 +0300
 
 mesa (24.2.2-1) unstable; urgency=medium
 
