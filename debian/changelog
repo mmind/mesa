@@ -1,10 +1,26 @@
-mesa (24.3.0~rc1+rocket-1) unstable; urgency=medium
+mesa (24.3.0~rc2+rocket-1) unstable; urgency=medium
 
-  * New upstream release candidate.
+  * Panfrost/Panvk feature backports.
   * Enable Rocket driver.
   * Enable Panfrost Vulkan driver.
 
  -- Heiko Stuebner <mmind@debian.org>  Tue, 11 Nov 2024 07:13:53 +0300
+
+mesa (24.3.0~rc2-1) experimental; urgency=medium
+
+  * New upstream release candidate.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Thu, 14 Nov 2024 17:09:15 +0200
+
+mesa (24.3.0~rc1-1) experimental; urgency=medium
+
+  * New upstream release candidate.
+  * patches: Refreshed.
+  * rules: Drop obsoleted config options.
+  * libglx-mesa0.symbols: Updated.
+  * libgbm1: Add dri_gbm.so.
+
+ -- Timo Aaltonen <tjaalton@debian.org>  Tue, 12 Nov 2024 15:17:38 +0200
 
 mesa (24.2.6-1) unstable; urgency=medium
 
